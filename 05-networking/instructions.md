@@ -141,6 +141,7 @@ Nomad unterstützt verschiedene Netzwerkmodi für Container-Tasks:
    Unter **Allocation Addresses** sehen Sie den zugewiesenen Host-Port:
 
    ```
+   Allocation Addresses (mode = "bridge"):
    Label  Dynamic  Address
    http   yes      10.0.1.13:XXXXX -> 5678
    ```
