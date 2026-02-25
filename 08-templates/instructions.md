@@ -54,12 +54,13 @@ Die `template`-Stanza in Nomad nutzt die Go Template-Syntax (ähnlich zu Consul 
 
       task "nginx" {
         driver = "docker"
-
+   
         config {
-          image   = "nginx:alpine"
-          ports   = ["http"]
-          command = "sh"
-          args    = ["-c", "nginx -c $NOMAD_ALLOC_DIR/local/nginx.conf -g 'daemon off;'"]
+          image = "nginx:alpine"
+          ports = ["http"]
+          volumes = [
+            "local/default.conf:/etc/nginx/conf.d/default.conf"
+          ]
         }
 
          template {
