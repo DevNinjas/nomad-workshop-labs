@@ -25,84 +25,81 @@ Die `template`-Stanza in Nomad nutzt die Go Template-Syntax (ähnlich zu Consul 
 1. Erstellen Sie eine Datei `template-file.hcl`:
 
    ```hcl
-   job "template-file" {
-     datacenters = ["dc1"]
-     type        = "service"
+job "template-file" {
+    datacenters = ["dc1"]
+    type        = "service"
 
-     group "app" {
-       count = 1
+    group "app" {
+    count = 1
 
-       network {
-         mode = "bridge"
-         port "http" {
-           to = 80
-         }
-       }
+    network {
+        mode = "bridge"
+        port "http" {
+        to = 80
+        }
+    }
 
-      service {
+    service {
         name = "${NOMAD_JOB_NAME}"
         port = "http"
 
         tags = [
-          "traefik.enable=true",
-          "traefik.http.routers.${NOMAD_JOB_NAME}-${NOMAD_NAMESPACE}.rule=Host(`${NOMAD_JOB_NAME}-${NOMAD_NAMESPACE}.nomad.devninjas.io`)",
-          "traefik.http.routers.${NOMAD_JOB_NAME}-${NOMAD_NAMESPACE}.entrypoints=https",
-          "traefik.http.routers.${NOMAD_JOB_NAME}-${NOMAD_NAMESPACE}.tls=true",
-          "traefik.http.routers.${NOMAD_JOB_NAME}-${NOMAD_NAMESPACE}.tls.certresolver=letsencrypt",
+        "traefik.enable=true",
+        "traefik.http.routers.${NOMAD_JOB_NAME}-${NOMAD_NAMESPACE}.rule=Host(`${NOMAD_JOB_NAME}-${NOMAD_NAMESPACE}.nomad.devninjas.io`)",
+        "traefik.http.routers.${NOMAD_JOB_NAME}-${NOMAD_NAMESPACE}.entrypoints=https",
+        "traefik.http.routers.${NOMAD_JOB_NAME}-${NOMAD_NAMESPACE}.tls=true",
+        "traefik.http.routers.${NOMAD_JOB_NAME}-${NOMAD_NAMESPACE}.tls.certresolver=letsencrypt",
         ]
-      }
+    }
 
-      task "nginx" {
+    task "nginx" {
         driver = "docker"
-   
+
         config {
-          image = "nginx:alpine"
-          ports = ["http"]
-          volumes = [
-            "local/default.conf:/etc/nginx/conf.d/default.conf"
-          ]
+            image = "nginx:alpine"
+            ports = ["http"]
+            volumes    = [
+                "local/default.conf:/etc/nginx/conf.d/default.conf",
+            ]
         }
 
-         template {
-           data = <<-EOF
-             <!DOCTYPE html>
-             <html>
-             <body>
-               <h1>Nomad Template Demo</h1>
-               <p>Job: {{ env "NOMAD_JOB_NAME" }}</p>
-               <p>Alloc-ID: {{ env "NOMAD_ALLOC_ID" }}</p>
-               <p>Node: {{ env "NOMAD_NODE_NAME" }}</p>
-             </body>
-             </html>
-           EOF
+        template {
+        data = <<-EOF
+            <!DOCTYPE html>
+            <html>
+            <body>
+            <h1>Nomad Template Demo</h1>
+            <p>Job: {{ env "NOMAD_JOB_NAME" }}</p>
+            <p>Alloc-ID: {{ env "NOMAD_ALLOC_ID" }}</p>
+            <p>Node: {{ env "NOMAD_NODE_NAME" }}</p>
+            </body>
+            </html>
+        EOF
 
-           destination = "local/index.html"
-         }
+        destination = "local/index.html"
+        }
 
-         template {
-           data = <<-EOF
-             events { worker_connections 1024; }
-             http {
-               server {
-                 listen 80;
-                 location / {
-                   root {{ env "NOMAD_ALLOC_DIR" }}/local;
-                   index index.html;
-                 }
-               }
-             }
-           EOF
+        template {
+        data = <<-EOF
+            server {
+            listen 80;
+            location / {
+                root /local;
+                index index.html;
+            }
+            }
+        EOF
 
-           destination = "local/nginx.conf"
-         }
+        destination = "local/default.conf"
+        }
 
-         resources {
-           cpu    = 100
-           memory = 64
-         }
-       }
-     }
-   }
+        resources {
+        cpu    = 100
+        memory = 64
+        }
+    }
+    }
+}
    ```
 
    **Warum so?** Die Template-Dateien landen im Allocation-Verzeichnis (`local/index.html`, `local/nginx.conf`). Nginx nutzt standardmäßig `/usr/share/nginx/html` und liest Config nur aus `/etc/nginx/conf.d/`. Damit Nginx Ihre generierte HTML-Datei ausliefert, wird eine eigene `nginx.conf` per Template erzeugt – mit `root {{ env "NOMAD_ALLOC_DIR" }}/local` – und Nginx mit `nginx -c $NOMAD_ALLOC_DIR/local/nginx.conf` gestartet. So lädt Nginx die Config aus dem Allocation-Verzeichnis und liefert die Dateien aus `local/` (u. a. Ihr `index.html`) aus.
