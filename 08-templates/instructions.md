@@ -79,19 +79,19 @@ job "template-file" {
         destination = "local/index.html"
         }
 
-        template {
+      template {
         data = <<-EOF
-            server {
+          server {
             listen 80;
             location / {
-                root /local;
-                index index.html;
+              root /local;
+              index index.html;
             }
-            }
+          }
         EOF
 
         destination = "local/default.conf"
-        }
+      }
 
         resources {
         cpu    = 100
