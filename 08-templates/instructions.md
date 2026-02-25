@@ -56,8 +56,10 @@ Die `template`-Stanza in Nomad nutzt die Go Template-Syntax (ähnlich zu Consul 
         driver = "docker"
 
         config {
-          image = "nginx:alpine"
-          ports = ["http"]
+          image   = "nginx:alpine"
+          ports   = ["http"]
+          command = "sh"
+          args    = ["-c", "nginx -c $NOMAD_ALLOC_DIR/local/nginx.conf -g 'daemon off;'"]
         }
 
          template {
@@ -78,16 +80,19 @@ Die `template`-Stanza in Nomad nutzt die Go Template-Syntax (ähnlich zu Consul 
 
          template {
            data = <<-EOF
-             server {
-               listen 80;
-               location / {
-                 root /local;
-                 index index.html;
+             events { worker_connections 1024; }
+             http {
+               server {
+                 listen 80;
+                 location / {
+                   root {{ env "NOMAD_ALLOC_DIR" }}/local;
+                   index index.html;
+                 }
                }
              }
            EOF
 
-           destination = "local/default.conf"
+           destination = "local/nginx.conf"
          }
 
          resources {
@@ -98,6 +103,8 @@ Die `template`-Stanza in Nomad nutzt die Go Template-Syntax (ähnlich zu Consul 
      }
    }
    ```
+
+   **Warum so?** Die Template-Dateien landen im Allocation-Verzeichnis (`local/index.html`, `local/nginx.conf`). Nginx nutzt standardmäßig `/usr/share/nginx/html` und liest Config nur aus `/etc/nginx/conf.d/`. Damit Nginx Ihre generierte HTML-Datei ausliefert, wird eine eigene `nginx.conf` per Template erzeugt – mit `root {{ env "NOMAD_ALLOC_DIR" }}/local` – und Nginx mit `nginx -c $NOMAD_ALLOC_DIR/local/nginx.conf` gestartet. So lädt Nginx die Config aus dem Allocation-Verzeichnis und liefert die Dateien aus `local/` (u. a. Ihr `index.html`) aus.
 
 2. Reichen Sie den Job ein:
 
@@ -212,8 +219,10 @@ Die `template`-Stanza in Nomad nutzt die Go Template-Syntax (ähnlich zu Consul 
         driver = "docker"
 
         config {
-          image = "nginx:alpine"
-          ports = ["http"]
+          image   = "nginx:alpine"
+          ports   = ["http"]
+          command = "sh"
+          args    = ["-c", "nginx -c $NOMAD_ALLOC_DIR/local/nginx.conf -g 'daemon off;'"]
         }
 
          template {
@@ -234,16 +243,19 @@ Die `template`-Stanza in Nomad nutzt die Go Template-Syntax (ähnlich zu Consul 
 
          template {
            data = <<-EOF
-             server {
-               listen 80;
-               location / {
-                 root /local;
-                 index index.html;
+             events { worker_connections 1024; }
+             http {
+               server {
+                 listen 80;
+                 location / {
+                   root {{ env "NOMAD_ALLOC_DIR" }}/local;
+                   index index.html;
+                 }
                }
              }
            EOF
 
-           destination = "local/default.conf"
+           destination = "local/nginx.conf"
          }
 
          resources {
